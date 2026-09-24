@@ -1,0 +1,8 @@
+# Python packages. Install with:  pip install -r requirements.txt
+python-dotenv      # reads settings from the .env file
+google-genai       # Gemini (watches the video)
+requests           # talks to DeepSeek (writes the script)
+edge-tts           # free AI voices
+moviepy            # video editing
+pillow             # draws arrows, text, subtitles
+pyTelegramBotAPI   # the Telegram bot
