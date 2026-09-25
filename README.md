@@ -27,25 +27,17 @@ on Telegram for approval.
 ## Install (once, on the VPS)
 
 ```bash
-# 1. System tools: ffmpeg (video) and Noto fonts (Thai, Vietnamese, and other scripts)
-sudo apt update
-sudo apt install -y ffmpeg fonts-noto-core python3-venv git
-
-# 2. Get the code
-git clone <your repo url> tiktok-maker
+cd ~
+git clone -b claude/screen-recording-tiktok-automation-4uf3a7 https://github.com/Nimku/Content-creation-project.git tiktok-maker
 cd tiktok-maker
-
-# 3. Python packages, in their own "venv" box so they don't disturb anything else
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# 4. Settings
-cp .env.example .env
-nano .env        # paste your keys, then Ctrl+O, Enter, Ctrl+X to save
+bash setup.sh
 ```
 
-Every time you log in again over SSH, run `cd tiktok-maker && source venv/bin/activate` first.
+`setup.sh` installs ffmpeg, the Noto fonts (Thai, Vietnamese, and other scripts) and the
+Python packages, then asks for your keys (hidden while you paste) and saves them in `.env`.
+Run `bash setup.sh` again any time to change a key.
+
+Every time you log in again over SSH, run `cd ~/tiktok-maker && source venv/bin/activate` first.
 
 ## Test step 1: Gemini watches a clip
 
