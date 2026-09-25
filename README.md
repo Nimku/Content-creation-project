@@ -18,7 +18,7 @@ on Telegram for approval.
 | `script.py` | *(coming)* DeepSeek writes the voice-over, caption, and hashtags |
 | `voice.py` | *(coming)* edge-tts makes the narration |
 | `edit.py` | *(coming)* builds the 1080x1920 video |
-| `bot.py` | *(coming)* the Telegram bot: receives clips, sends videos with buttons |
+| `bot.py` | The Telegram bot: receives clips (other features coming) |
 | `data/input` | Clips you send to the bot |
 | `data/work` | Temporary files (cleaned up automatically) |
 | `data/output` | Finished videos |
@@ -39,7 +39,18 @@ Run `bash setup.sh` again any time to change a key.
 
 Every time you log in again over SSH, run `cd ~/tiktok-maker && source venv/bin/activate` first.
 
-## Test step 1: Gemini watches a clip
+## Start the bot
+
+```bash
+cd ~/tiktok-maker && source venv/bin/activate
+nice -n 15 ionice -c3 python3 bot.py
+```
+
+`nice` and `ionice` make the bot run at low priority, so your proxies stay fast.
+Then send the bot a screen recording (under 20 MB) with a short caption such as
+`how to add a proxy in Telegram`. Stop the bot with Ctrl+C.
+
+## Test step 1 without the bot: Gemini watches a clip
 
 Copy a recording to the VPS (for example, from Termux:
 `scp /sdcard/Movies/clip.mp4 root@YOUR_VPS_IP:tiktok-maker/data/input/`), then run:
