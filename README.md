@@ -15,7 +15,7 @@ on Telegram for approval.
 | `.env` | **All your settings** (keys, channel name, languages, voices, colors) |
 | `config.py` | Reads `.env` so the other files can use it |
 | `analyze.py` | Sends the clip to Gemini and gets the list of steps and tap positions |
-| `script.py` | *(coming)* DeepSeek writes the voice-over, caption, and hashtags |
+| `script.py` | DeepSeek writes the voice-over, caption, and hashtags for each language |
 | `voice.py` | *(coming)* edge-tts makes the narration |
 | `edit.py` | *(coming)* builds the 1080x1920 video |
 | `bot.py` | The Telegram bot: receives clips (other features coming) |

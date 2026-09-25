@@ -4,7 +4,7 @@ Send it a screen recording with a short note as the caption, for example:
     how to add a proxy in Telegram
 It saves the clip to data/input and works on it in the background.
 
-Right now it runs STEP 1 (Gemini) and replies with the steps it found.
+Right now it runs STEP 1 (Gemini) and STEP 2 (DeepSeek scripts) and replies with the results.
 Later steps (script, voice, video, approval buttons) get added here as they are built.
 
 Start it (low priority, so your proxies stay fast):
@@ -21,6 +21,7 @@ import telebot
 
 import config
 from analyze import analyze
+from script import script_as_text, write_script
 
 config.require("TELEGRAM_BOT_TOKEN", "TELEGRAM_ADMIN_ID")
 ADMIN_ID = int(config.TELEGRAM_ADMIN_ID)
@@ -103,8 +104,14 @@ def process(path, note):
     for i, s in enumerate(result["steps"], 1):
         tap = f' (tap at {s["tap_x"]:.2f}, {s["tap_y"]:.2f})' if s["tap_x"] is not None else ""
         lines.append(f'{i}. {s["start"]:.1f}s-{s["end"]:.1f}s  {s["action"]}{tap}')
-    lines.append(f'\nGemini cost: about ${result["gemini_cost_usd"]:.4f}')
     tell_admin("\n".join(lines))
+
+    cost = result["gemini_cost_usd"]
+    for lang in config.LANGUAGES:
+        script = write_script(result, lang)
+        cost += script["deepseek_cost_usd"]
+        tell_admin(script_as_text(script))
+    tell_admin(f"Total AI cost for this clip: about ${cost:.4f}")
 
 
 def worker():
