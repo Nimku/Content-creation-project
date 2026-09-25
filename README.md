@@ -1,28 +1,35 @@
 # TikTok Tutorial Maker
 
-Turns your phone screen recordings into short vertical TikTok tutorials
-(AI voice, arrows, subtitles) in several languages, and sends them to you
-on Telegram for approval.
+Send a phone screen recording to your Telegram bot. A few minutes later you get
+finished vertical TikTok tutorials (AI voice, arrows, zoom, subtitles) in several
+languages, each with Approve / Regenerate / Skip buttons.
 
-> Work in progress: built one step at a time. Right now **step 1
-> (Gemini watches the clip)** works. More sections will be added as each
-> step is finished.
+## How it works
+
+1. **You** send a screen recording to the bot, with a short caption like `how to add a proxy in Telegram`.
+2. **Gemini** watches it once and lists the steps and where you tapped.
+3. **DeepSeek** writes a short voice-over, a caption and hashtags for each language.
+4. **edge-tts** (free) reads the voice-over aloud.
+5. The video is built: 1080x1920, arrows and zoom on each tap, "Step 1, 2...", word-by-word subtitles,
+   a watermark and an end screen with your channel. Slow parts are sped up; if the voice needs
+   more time, the video slows down or freezes on the tap.
+6. **You** get each video as a file. Tap **Approve** to get the caption to copy, then upload it to TikTok yourself.
 
 ## What each file does
 
 | File | Job |
 |---|---|
 | `.env` | **All your settings** (keys, channel name, languages, voices, colors) |
-| `config.py` | Reads `.env` so the other files can use it |
-| `analyze.py` | Sends the clip to Gemini and gets the list of steps and tap positions |
-| `script.py` | DeepSeek writes the voice-over, caption, and hashtags for each language |
-| `voice.py` | *(coming)* edge-tts makes the narration |
-| `edit.py` | *(coming)* builds the 1080x1920 video |
-| `bot.py` | The Telegram bot: receives clips (other features coming) |
-| `data/input` | Clips you send to the bot |
-| `data/work` | Temporary files (cleaned up automatically) |
-| `data/output` | Finished videos |
-| `logs/` | Log of each video made and what it cost |
+| `setup.sh` | Installs everything, asks for your keys, starts the bot |
+| `bot.py` | The Telegram bot: receives clips, runs every step, sends the videos with buttons |
+| `analyze.py` | Gemini watches the clip |
+| `script.py` | DeepSeek writes the voice-over, caption and hashtags |
+| `voice.py` | edge-tts makes the voice |
+| `edit.py` | Builds the video |
+| `housekeeping.py` | Cost log and cleaning up old files |
+| `data/input`, `data/work`, `data/output` | Clips, temporary files, finished videos (deleted after `CLEANUP_DAYS`) |
+| `logs/videos.csv` | Every video made, approved or skipped, with its estimated cost |
+| `logs/bot.log` | What the bot did, including errors |
 
 ## Install (once, on the VPS)
 
@@ -33,49 +40,63 @@ cd tiktok-maker
 bash setup.sh
 ```
 
-`setup.sh` installs ffmpeg, the Noto fonts (Thai, Vietnamese, and other scripts) and the
-Python packages, then asks for your keys (hidden while you paste) and saves them in `.env`.
-Run `bash setup.sh` again any time to change a key.
+`setup.sh` installs ffmpeg, the Noto fonts (for Thai, Vietnamese and other scripts) and the Python
+packages. It then asks for your keys (hidden while you paste) and starts the bot as a background
+service. The service runs at low priority, so your proxies stay fast, and it restarts by itself
+after a crash or a reboot.
 
-Every time you log in again over SSH, run `cd ~/tiktok-maker && source venv/bin/activate` first.
+## Start, stop, update
 
-## Start the bot
+| Do this | Command |
+|---|---|
+| Is it running? | `systemctl status tiktok-bot` |
+| Stop | `systemctl stop tiktok-bot` |
+| Start | `systemctl start tiktok-bot` |
+| Restart (after changing `.env`) | `systemctl restart tiktok-bot` |
+| Watch what it is doing | `journalctl -u tiktok-bot -f` (Ctrl+C to leave) |
+| Get the newest version | `cd ~/tiktok-maker && git pull && systemctl restart tiktok-bot` |
 
-```bash
-cd ~/tiktok-maker && source venv/bin/activate
-nice -n 15 ionice -c3 python3 bot.py
-```
-
-`nice` and `ionice` make the bot run at low priority, so your proxies stay fast.
-Then send the bot a screen recording (under 20 MB) with a short caption such as
-`how to add a proxy in Telegram`. Stop the bot with Ctrl+C.
-
-## Test step 1 without the bot: Gemini watches a clip
-
-Copy a recording to the VPS (for example, from Termux:
-`scp /sdcard/Movies/clip.mp4 root@YOUR_VPS_IP:tiktok-maker/data/input/`), then run:
-
-```bash
-python3 analyze.py data/input/clip.mp4 "how to add a proxy in Telegram"
-```
-
-You should see something like:
-
-```
-Found 4 steps in 18.2s of video:
-  Step 1:   0.0s -   3.1s  Open Telegram settings  (tap at x=0.92, y=0.07)
-  ...
-Estimated Gemini cost: $0.0040
-```
-
-The answer is saved to `data/work/clip/steps.json`. Running the command again
-reuses that file and costs nothing. Add `--fresh` to make Gemini look at the clip again.
+In Telegram, `/cost` shows the total estimated AI cost so far.
 
 ## Changing settings
 
-Everything is in `.env`. Edit it with `nano .env`. Changes take effect the next time
-the program starts.
+Run `nano ~/tiktok-maker/.env`, change what you want, save (Ctrl+O, Enter, Ctrl+X), then
+`systemctl restart tiktok-bot`. To change only the keys, run `bash setup.sh` again.
 
-- `GEMINI_MODEL`: must be a Gemini 3.x Flash model. Do not use 2.5.
-- `GEMINI_FPS`: how many frames per second Gemini looks at. If quick taps are missed, try `3` or `4`. Higher values cost a little more.
-- `LANGUAGES`: for example `en,th` to make only English and Thai versions.
+- `LANGUAGES`: for example `en,th` to make only English and Thai videos. Codes: `en id vi th ms`.
+- `VOICE_EN`, `VOICE_TH`...: the voice for each language. List all voices with
+  `venv/bin/edge-tts --list-voices | grep th-TH` (use a different language code in place of `th-TH`).
+- `VOICE_RATE`: speaking speed (`+0%` is normal, `+10%` is a bit faster).
+- `CHANNEL_NAME`: shown in the watermark, end screen and call to action.
+- `ARROW_COLOR`, `SUBTITLE_COLOR`, `HIGHLIGHT_COLOR`, `STEP_LABEL_COLOR`: colors, for example `#FF3B30`.
+- `ZOOM`: how much to zoom in on taps (`1.0` means no zoom).
+- `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL`: must be Gemini 3.x Flash models (not 2.5).
+- `RENDER_THREADS`: CPU threads used to make videos. Keep it low (`1`–`2`) to protect your proxies.
+- `CLEANUP_DAYS`: files older than this are deleted automatically.
+
+## How to record good clips
+
+1. **Turn on "Show taps"** (only once): Settings → About phone → tap *Build number* 7 times.
+   Then Settings → System → Developer options → turn on **Show taps**.
+2. Use the phone's **Screen recorder** with **no audio**.
+3. **Go slowly.** Wait about 1 second before and after each tap, so the steps are clear.
+4. Keep clips to **15–40 seconds**, and one task per clip.
+5. **Never show private things**: chats, phone numbers, or a proxy secret you don't want public.
+6. Send it to the bot as a normal **video** (not as a file) so it stays under 20 MB, with a short caption
+   saying what it shows.
+
+## Costs
+
+Gemini's free tier is fine to start with. DeepSeek uses your prepaid balance. The voices, the video editing
+and Telegram are free. A clip with 5 languages costs well under 1 cent in AI calls. See `logs/videos.csv`
+or send `/cost`.
+
+## If something goes wrong
+
+The bot messages you a short explanation. More detail: `journalctl -u tiktok-bot -n 50`.
+
+- **"Gemini is too busy"**: Google is overloaded. Send the clip again later.
+- **"refused the API key"**: run `bash setup.sh` and paste a working key.
+- **"DeepSeek balance is empty"**: top up at platform.deepseek.com.
+- **Nothing happens at all**: run `systemctl status tiktok-bot`. Only one copy of the bot can run
+  at a time, so don't also start `python3 bot.py` by hand.

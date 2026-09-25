@@ -37,6 +37,7 @@ Return JSON with exactly these keys:
   Write {channel} exactly like that.
 - "caption": a TikTok caption (1-2 short sentences, may include 1-2 emojis, mention {channel}).
 - "hashtags": a list of 3 to 5 hashtags that fit {language}-speaking viewers, each starting with #.
+The hook, lines and cta are read aloud by a voice: no emojis, hashtags or symbols in them.
 The whole voice-over (hook + lines + cta) should take 20 to 45 seconds to say.
 Reply with ONLY the JSON."""
 
