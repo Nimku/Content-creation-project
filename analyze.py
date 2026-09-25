@@ -158,10 +158,10 @@ def ask_gemini(video_path, note, duration):
             text_prompt = prompt
             if last_error:
                 text_prompt += f"\n\nYour previous answer was rejected because: {last_error}. Please fix it."
-            response = client.models.generate_content(
-                model=config.GEMINI_MODEL,
+            response = generate_with_retries(
+                client,
                 contents=[video_part, text_prompt],
-                config=types.GenerateContentConfig(
+                settings=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
                 ),
@@ -179,6 +179,36 @@ def ask_gemini(video_path, note, duration):
         except Exception:
             pass
     raise RuntimeError(f"Gemini gave a broken answer twice: {last_error}")
+
+
+BUSY_CODES = (429, 500, 503, 504)  # "too many requests" / "server busy": worth waiting and trying again
+WAITS = (15, 45, 90)  # seconds to wait between tries
+
+
+def generate_with_retries(client, contents, settings):
+    """Asks Gemini. If Google is busy, waits and tries again a few times,
+    then tries the backup model (GEMINI_FALLBACK_MODEL in .env)."""
+    from google.genai import errors
+
+    models = [m for m in (config.GEMINI_MODEL, config.GEMINI_FALLBACK_MODEL) if m]
+    last = None
+    for model in dict.fromkeys(models):  # removes a duplicate if both are the same
+        for wait in (0,) + WAITS:
+            if wait:
+                print(f"Gemini is busy, waiting {wait}s and trying again...")
+                time.sleep(wait)
+            try:
+                return client.models.generate_content(model=model, contents=contents, config=settings)
+            except errors.APIError as e:
+                if e.code == 404 and model != models[0]:
+                    print(f"Backup model {model} was not found, check GEMINI_FALLBACK_MODEL in .env")
+                    break
+                if e.code not in BUSY_CODES:
+                    raise
+                last = e
+        else:
+            print(f"{model} is still busy, trying the next model if there is one...")
+    raise RuntimeError(f"Gemini is too busy right now (error {last.code}). Please send the clip again later.")
 
 
 def gemini_cost(response):

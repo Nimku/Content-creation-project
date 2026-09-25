@@ -47,6 +47,11 @@ def tell_admin(text):
 
 def plain_error(e):
     """A short, readable error message instead of a wall of code."""
+    raw = str(e)
+    if "RESOURCE_EXHAUSTED" in raw or "429" in raw.split(".")[0]:
+        return "Gemini's usage limit was reached. Wait a while, or add billing in Google AI Studio."
+    if "API key not valid" in raw or "UNAUTHENTICATED" in raw or "PERMISSION_DENIED" in raw:
+        return "Gemini refused the API key. Run 'bash setup.sh' and paste a working key."
     text = str(e).strip().splitlines()[0] if str(e).strip() else type(e).__name__
     return text[:300]
 

@@ -30,6 +30,7 @@ TELEGRAM_ADMIN_ID = get("TELEGRAM_ADMIN_ID")
 
 # Models
 GEMINI_MODEL = get("GEMINI_MODEL", "gemini-3.8-flash")
+GEMINI_FALLBACK_MODEL = get("GEMINI_FALLBACK_MODEL", "gemini-3.7-flash")
 GEMINI_FPS = float(get("GEMINI_FPS", "2"))
 DEEPSEEK_MODEL = get("DEEPSEEK_MODEL", "deepseek-chat")
 
