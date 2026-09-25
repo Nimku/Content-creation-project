@@ -161,7 +161,10 @@ def ask_gemini(video_path, note, duration):
             response = client.models.generate_content(
                 model=config.GEMINI_MODEL,
                 contents=[video_part, text_prompt],
-                config=types.GenerateContentConfig(response_mime_type="application/json"),
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+                ),
             )
             cost += gemini_cost(response)
             try:
